@@ -1,0 +1,7 @@
+{
+  "plugins": ["firebase-rules"],
+  "extends": ["plugin:firebase-rules/recommended"],
+  "rules": {
+    "firebase-rules/no-open-reads": "error"
+  }
+}

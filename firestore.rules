@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function isTeacher() {
+      return isSignedIn() && getUserData(request.auth.uid).role == 'teacher';
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // --- Collection: Users ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['userId', 'name', 'email', 'role', 'streak', 'lastLogin']) &&
+               data.userId == request.auth.uid &&
+               data.name is string && data.name.size() <= 100;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(userId) && isValidUser(incoming()) && 
+                    incoming().role == 'student';
+      
+      allow update: if isSignedIn() && isOwner(userId) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'streak', 'lastLogin', 'profilePic', 'schoolStatus']);
+    }
+
+    // --- Collection: Marks ---
+    match /marks/{markId} {
+      function isValidMark(data) {
+        return data.keys().hasAll(['studentId', 'subjectId', 'score', 'total', 'testDate', 'type', 'teacherId']) &&
+               data.score is number && data.total is number &&
+               data.teacherId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || isTeacher());
+      allow list: if isSignedIn() && resource.data.studentId == request.auth.uid; // Only students list their own. Teachers list by query.
+      allow create: if isTeacher() && isValidId(markId) && isValidMark(incoming());
+      allow update: if isTeacher() && existing().teacherId == request.auth.uid && isValidMark(incoming());
+      allow delete: if isTeacher() && existing().teacherId == request.auth.uid;
+    }
+
+    // --- Collection: Timetables ---
+    match /timetables/{studentId} {
+      allow get: if isSignedIn() && (isTeacher() || isOwner(studentId));
+      allow list: if isSignedIn() && (isTeacher() || resource.data.studentId == request.auth.uid);
+      
+      allow create: if isOwner(studentId) && isValidId(studentId) && 
+                    incoming().studentId == request.auth.uid;
+      
+      allow update: if isSignedIn() && (
+        // Action: Student update their own progress
+        (isOwner(studentId) && incoming().diff(existing()).affectedKeys().hasOnly(['progress']) &&
+         incoming().studentId == existing().studentId) ||
+        // Action: Teacher update school syllabus
+        (isTeacher() && incoming().diff(existing()).affectedKeys().hasOnly(['schoolSyllabus']) &&
+         incoming().studentId == existing().studentId)
+      );
+    }
+
+    // --- Collection: Notifications ---
+    match /notifications/{notifId} {
+      allow read: if isSignedIn();
+      allow write: if isTeacher();
+    }
+
+    // --- Collection: Recent Activity ---
+    match /recent_activity/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // --- Collection: Subjects ---
+    match /subjects/{subjectId} {
+      allow read: if isSignedIn();
+      allow write: if isTeacher();
+    }
+  }
+}

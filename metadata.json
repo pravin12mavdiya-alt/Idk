@@ -1,0 +1,9 @@
+{
+  "name": "InMotion",
+  "description": "An all-in-one AI-powered student companion for school academics, featuring AI summaries, test generators, homework helpers, and detailed academic progress tracking.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": []
+}

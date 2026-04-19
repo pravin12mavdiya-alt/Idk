@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "Represents a student or teacher in the system",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "enum": ["student", "teacher"] },
+        "grade": { "type": "string" },
+        "section": { "type": "string" },
+        "schoolStatus": { "type": "string" },
+        "profilePic": { "type": "string" },
+        "streak": { "type": "integer" },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "email", "role"]
+    },
+    "subject": {
+      "title": "Subject",
+      "description": "An academic subject",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "chapters": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "mark": {
+      "title": "Mark",
+      "description": "A student's mark in a specific test",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "score": { "type": "number" },
+        "total": { "type": "number" },
+        "testDate": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["weekly", "official"] },
+        "teacherId": { "type": "string" }
+      }
+    },
+    "timetable": {
+      "title": "Timetable Progress",
+      "description": "Student progress for each chapter",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "progress": {
+          "type": "object",
+          "description": "Map of chapterId to boolean completion"
+        },
+        "schoolSyllabus": {
+          "type": "object",
+          "description": "Map of chapterId to boolean completion (updated by teacher)"
+        }
+      }
+    },
+    "notification": {
+      "title": "Notification",
+      "description": "Announcements and homework tasks",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "enum": ["announcement", "homework", "test"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "targetGrade": { "type": "string" },
+        "authorId": { "type": "string" }
+      }
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "description": "Tracking feature usage for specific user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "activities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "featureId": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "User profiles"
+    },
+    "/subjects/{subjectId}": {
+      "schema": "subject",
+      "description": "Subject definitions"
+    },
+    "/marks/{markId}": {
+      "schema": "mark",
+      "description": "Test scores"
+    },
+    "/timetables/{studentId}": {
+      "schema": "timetable",
+      "description": "Academics progress"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "notification",
+      "description": "News and tasks"
+    },
+    "/recent_activity/{userId}": {
+      "schema": "recentActivity",
+      "description": "Feature usage history"
+    }
+  }
+}
